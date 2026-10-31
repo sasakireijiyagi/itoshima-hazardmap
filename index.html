@@ -478,7 +478,7 @@ var HAZ = [
    cls:[["#FF0000","家屋倒壊等氾濫想定区域（氾濫流）"]], seen:"/15/28229/13149.png", shelter:0, minz:4, hatch:true},
   {id:"kaoku_kagan", g:"水害（川の氾濫）", n:"家屋倒壊等氾濫想定区域", s:"河岸侵食（岸ごと削られる）", sn:"家屋倒壊（河岸侵食）",
    p:"01_flood_l2_kaokutoukai_kagan_data", c:"#FF0000",
-   cls:[["#FF0000","家屋倒壊等氾濫想定区域（河岸侵食）"]], seen:"/15/28236/13136.png", shelter:0, minz:4},
+   cls:[["#FF0000","家屋倒壊等氾濫想定区域（河岸侵食）"]], soft:true, seen:"/15/28236/13136.png", shelter:0, minz:4},
 
   {id:"tsunami", g:"海からの災害", n:"津波浸水想定", s:"最大クラスの津波", sn:"津波",
    p:"04_tsunami_newlegend_data", c:"#FFB7B7", cls:DEPTH, seen:"/15/28232/13138.png", shelter:4},
@@ -496,10 +496,11 @@ var HAZ = [
    cls:[["#B40028","特別警戒区域（レッド）"],["#FF9900","警戒区域（イエロー）"]], seen:"/15/28231/13137.png", shelter:1}
 ];
 
-/* 色見本。氾濫流は地図と同じ○の線で見せる */
-function swatch(color, hatch){
-  return hatch ? "background:radial-gradient(circle,transparent 32%,"+color+" 34%,"+color+" 48%,transparent 50%) center/8px 8px"
-               : "background:"+color;
+/* 色見本。公式の凡例に合わせ，氾濫流は白地に赤い○，河岸侵食は半透明の赤にする */
+function swatch(color, h){
+  if(h.hatch) return "background:#fff radial-gradient(circle,transparent 1.7px,"+color+" 1.9px,"+color+" 2.9px,transparent 3.1px) 0 0/6px 6px;border-color:"+color;
+  if(h.soft) return "background:rgba(255,0,0,.5);border-color:"+color;
+  return "background:"+color;
 }
 
 var BASES = [
@@ -617,7 +618,7 @@ groups.forEach(function(g){
     row.innerHTML =
       '<label for="cb-'+h.id+'">' +
         '<input type="checkbox" id="cb-'+h.id+'">' +
-        '<span class="sw" style="'+swatch(h.c,h.hatch)+'"></span>' +
+        '<span class="sw" style="'+swatch(h.c,h)+'"></span>' +
         '<span class="nm">'+h.n+'<small>'+h.s+'</small></span>' +
       '</label>' +
       '<div class="op">' +
@@ -685,7 +686,7 @@ function buildLegend(){
   block.hidden = false;
   var seen = {};
   active.forEach(function(h){
-    var key = h.hatch ? h.id : h.cls.map(function(c){return c[0]}).join();
+    var key = h.hatch || h.soft ? h.id : h.cls.map(function(c){return c[0]}).join();
     if(seen[key]){
       seen[key].title.textContent += "・" + h.n + (h.s?"（"+h.s+"）":"");
       return;
@@ -697,7 +698,7 @@ function buildLegend(){
     var items = document.createElement("div"); items.className = "items";
     h.cls.forEach(function(c){
       var it = document.createElement("div"); it.className = "it";
-      it.innerHTML = '<i style="'+swatch(c[0],h.hatch)+'"></i><span>'+c[1]+'</span>';
+      it.innerHTML = '<i style="'+swatch(c[0],h)+'"></i><span>'+c[1]+'</span>';
       items.appendChild(it);
     });
     d.appendChild(items); el.appendChild(d);
@@ -1063,9 +1064,9 @@ async function diagnose(lat, lon, placeName, fromSearch){
   } else {
     hits.forEach(function(x){
       html += '<div class="risk hit">' +
-        '<span class="sw" style="background:'+x.r.color+'"></span>' +
+        '<span class="sw" style="'+swatch(x.r.color,x.h)+'"></span>' +
         '<span class="nm">'+esc(x.h.n)+(x.h.s?'<br><span style="font-size:10.5px;opacity:.75">'+esc(x.h.s)+'</span>':'')+'</span>' +
-        '<span class="vl">'+esc(x.r.label)+'</span></div>';
+        '<span class="vl">'+esc(x.h.hatch || x.h.soft ? "区域内" : x.r.label)+'</span></div>';
     });
     var clear = results.filter(function(x){ return !x.r; });
     if(clear.length){
