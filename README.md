@@ -1,8 +1,10 @@
-# 糸島ハザードマップ
+# さくさく動く糸島ハザードマップ
 
 福岡県糸島市のハザードマップを、**複数の災害を重ねて**見られる軽量ビューアです。
 
-**公開先 → https://sasakireijiyagi.github.io/itoshima-hazardmap/**
+[いとしま一目瞭然](https://itoshima-watch.sasakireijiyagi.com/)シリーズの1本です。
+
+**公開先 → https://itoshima-watch.sasakireijiyagi.com/hazard/**
 
 > これは糸島市の公式サイトではありません。個人が公開データを使って作った非公式のビューアです。
 > 避難の判断は、糸島市の防災情報と気象庁の気象情報に従ってください。
