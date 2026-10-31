@@ -498,7 +498,7 @@ var HAZ = [
 
 /* 色見本。公式の凡例に合わせ，氾濫流は白地に赤い○，河岸侵食は半透明の赤にする */
 function swatch(color, h){
-  if(h.hatch) return "background:#fff radial-gradient(circle,transparent 1.7px,"+color+" 1.9px,"+color+" 2.9px,transparent 3.1px) 0 0/6px 6px;border-color:"+color;
+  if(h.hatch) return "background:#fff radial-gradient(circle,#fff 3.2px,"+color+" 3.5px,"+color+" 4.7px,#fff 5px) center/11px 11px;border-color:"+color;
   if(h.soft) return "background:rgba(255,0,0,.5);border-color:"+color;
   return "background:"+color;
 }
@@ -698,7 +698,7 @@ function buildLegend(){
     var items = document.createElement("div"); items.className = "items";
     h.cls.forEach(function(c){
       var it = document.createElement("div"); it.className = "it";
-      it.innerHTML = '<i style="'+swatch(c[0],h)+'"></i><span>'+c[1]+'</span>';
+      it.innerHTML = '<i style="'+swatch(c[0],h)+(h.hatch ? ';width:46px;height:24px' : '')+'"></i><span>'+c[1]+'</span>';
       items.appendChild(it);
     });
     d.appendChild(items); el.appendChild(d);
