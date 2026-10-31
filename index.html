@@ -742,6 +742,8 @@ document.getElementById("shelterCount").textContent = SHELTERS.length;
 /* ============ 地点診断 ============ */
 
 var Z_SAMPLE = 17;
+var MUNI_ITOSHIMA = "40230";
+var NEAR_LIMIT = 5000;
 var tileCache = {};
 var tileCacheKeys = [];
 var TILE_FAILED = {};    /* 読めなかった印。404（タイルが無い＝区域外）と区別する */
@@ -948,17 +950,27 @@ async function diagnose(lat, lon, placeName){
     return {s:s, d:haversine([lat,lon],[s[3],s[2]])};
   }).sort(function(a,b){ return a.d-b.d; }).slice(0,4);
 
-  html += '<h3>' + (needIdx.length
-      ? "この災害に対応した近くの避難場所"
-      : "近くの指定緊急避難場所") + '</h3><div class="near">';
-  near.forEach(function(x, i){
-    html += '<button data-lat="'+x.s[3]+'" data-lon="'+x.s[2]+'" data-i="'+SHELTERS.indexOf(x.s)+'">' +
-      '<span class="d">' + (x.d < 1000 ? Math.round(x.d/10)*10 + "m" : (x.d/1000).toFixed(1) + "km") + '</span>' +
-      '<span class="n">' + esc(x.s[0]) + '</span></button>';
-  });
-  html += '</div>';
+  /* 収録は糸島市内だけ。市外では遠い避難場所を「近く」と出さない。
+     海の上などで市区町村が返らないときは，最寄りまでの距離で見る */
+  var muni = meta[0] && meta[0].results && meta[0].results.muniCd;
+  var nearest = Math.min.apply(null, SHELTERS.map(function(s){ return haversine([lat,lon],[s[3],s[2]]); }));
+  var outside = muni ? muni !== MUNI_ITOSHIMA : nearest > NEAR_LIMIT;
 
-  html += '<p class="note">' + (!unknown.length
+  if(outside){
+    html += '<h3>避難場所</h3><p class="note">この地点の避難場所は出していません。収録しているのは糸島市内の避難場所だけです。</p>';
+  } else {
+    html += '<h3>' + (needIdx.length
+        ? "この災害に対応した近くの避難場所"
+        : "近くの指定緊急避難場所") + '</h3><div class="near">';
+    near.forEach(function(x, i){
+      html += '<button data-lat="'+x.s[3]+'" data-lon="'+x.s[2]+'" data-i="'+SHELTERS.indexOf(x.s)+'">' +
+        '<span class="d">' + (x.d < 1000 ? Math.round(x.d/10)*10 + "m" : (x.d/1000).toFixed(1) + "km") + '</span>' +
+        '<span class="n">' + esc(x.s[0]) + '</span></button>';
+    });
+    html += '</div>';
+  }
+
+  html += '<p class="note">' + (!unknown.length || outside
       ? '浸水深は公開タイルの色から判定しています。区域の境界付近では実際の指定と差が出ることがあります。正式な確認は糸島市または福岡県の原典図でお願いします。'
       : '上の避難場所は直線距離の順です。判定できなかった災害があるため，災害の種類では絞り込んでいません。') + '</p>';
 
@@ -1139,7 +1151,7 @@ function restore(){
     if(p.length >= 5){ base = p[4].replace("+hill",""); hill = /\+hill/.test(p[4]); }
   }
   if(onIds === null && saved && saved.on) onIds = Object.keys(saved.on).filter(function(k){return saved.on[k]});
-  if(onIds === null) onIds = HAZ.filter(function(x){return x.on}).map(function(x){return x.id});
+  if(onIds === null) onIds = PRESETS.all;
   if(base === null) base = (saved && saved.base) || "pale";
   if(hill === null) hill = !!(saved && saved.hill);
 
