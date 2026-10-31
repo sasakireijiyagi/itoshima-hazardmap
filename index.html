@@ -444,7 +444,7 @@ var HAZ = [
    p:"01_flood_l2_keizoku_data", c:"#FAF500", cls:KEIZOKU, shelter:0},
   {id:"kaoku_hanran", g:"水害（川の氾濫）", n:"家屋倒壊等氾濫想定区域", s:"氾濫流（家が流される力）", sn:"家屋倒壊（氾濫流）",
    p:"01_flood_l2_kaokutoukai_hanran_data", c:"#FF0000",
-   cls:[["#FF0000","家屋倒壊等氾濫想定区域（氾濫流）"]], shelter:0, minz:4},
+   cls:[["#FF0000","家屋倒壊等氾濫想定区域（氾濫流）"]], shelter:0, minz:4, hatch:true},
   {id:"kaoku_kagan", g:"水害（川の氾濫）", n:"家屋倒壊等氾濫想定区域", s:"河岸侵食（岸ごと削られる）", sn:"家屋倒壊（河岸侵食）",
    p:"01_flood_l2_kaokutoukai_kagan_data", c:"#FF0000",
    cls:[["#FF0000","家屋倒壊等氾濫想定区域（河岸侵食）"]], shelter:0, minz:4},
@@ -748,6 +748,7 @@ var tileCache = {};
 var tileCacheKeys = [];
 var TILE_FAILED = {};    /* 読めなかった印。404（タイルが無い＝区域外）と区別する */
 var TILE_TIMEOUT = 12000;
+var HATCH_R = 6;         /* 氾濫流の○模様の穴は中心から最大5px。ズームによらない */
 
 function fetchTile(url){
   var ctl = new AbortController();
@@ -824,10 +825,38 @@ function dominant(ctx, px, py){
   return best;
 }
 
+/* 模様の層：地点の周囲に線があれば区域内。隣のタイルにまたがっても見る。
+   true／false／null（タイルなし）／TILE_FAILED */
+async function hatchHit(h, lat, lon, z){
+  var t = tilePos(lat, lon, z);
+  var gx = t.x*256 + t.px, gy = t.y*256 + t.py;
+  var found = null, failed = false;
+  for(var ty = Math.floor((gy-HATCH_R)/256); ty <= Math.floor((gy+HATCH_R)/256); ty++){
+    for(var tx = Math.floor((gx-HATCH_R)/256); tx <= Math.floor((gx+HATCH_R)/256); tx++){
+      var c = await tileCanvas(RASTER + h.p + "/" + z + "/" + tx + "/" + ty + ".png");
+      if(c === TILE_FAILED){ failed = true; continue; }
+      if(!c) continue;
+      if(found === null) found = false;
+      var x0 = Math.max(0, gx-HATCH_R-tx*256), y0 = Math.max(0, gy-HATCH_R-ty*256);
+      var w = Math.min(256, gx+HATCH_R+1-tx*256) - x0, ht = Math.min(256, gy+HATCH_R+1-ty*256) - y0;
+      var d = c.getContext("2d", {willReadFrequently:true}).getImageData(x0, y0, w, ht).data;
+      for(var i=3; i<d.length; i+=4){ if(d[i] >= 200) return true; }
+    }
+  }
+  return failed ? TILE_FAILED : found;
+}
+
 /* 区域内なら {label,color}，区域外なら null，判定できなければ {unknown:true} */
 async function sampleHazard(h, lat, lon){
   var failed = false;
   for(var z of [Z_SAMPLE, 16, 15]){
+    if(h.hatch){
+      var hit = await hatchHit(h, lat, lon, z);
+      if(hit === TILE_FAILED){ failed = true; continue; }
+      if(hit === null) continue;
+      if(hit) return {label:h.cls[0][1], color:h.cls[0][0]};
+      return failed ? {unknown:true} : null;
+    }
     var t = tilePos(lat, lon, z);
     var c = await tileCanvas(RASTER + h.p + "/" + z + "/" + t.x + "/" + t.y + ".png");
     if(c === TILE_FAILED){ failed = true; continue; }
